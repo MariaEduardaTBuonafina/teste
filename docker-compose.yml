@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+
+  # Container do Backend (Python/Flask)
+  backend:
+    build: ./backend
+    container_name: gastos-backend
+    ports:
+      - "5000:5000"     # Porta do computador : Porta do container
+    environment:
+      - PORT=5000
+    restart: unless-stopped
+
+  # Container do Frontend (Nginx com HTML)
+  frontend:
+    build: ./frontend
+    container_name: gastos-frontend
+    ports:
+      - "8080:80"       # Acesse pelo navegador em http://localhost:8080
+    depends_on:
+      - backend         # Só sobe depois que o backend estiver pronto
+    restart: unless-stopped

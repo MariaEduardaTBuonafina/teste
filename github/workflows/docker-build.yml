@@ -1,0 +1,39 @@
+# Nome que aparece na aba "Actions" do GitHub
+name: Build Docker Images
+
+# GATILHO: executa a cada push ou Pull Request na branch main
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+
+  # Job 1: Build do Backend
+  build-backend:
+    name: Build Backend
+    runs-on: ubuntu-latest   # Máquina virtual Ubuntu gratuita do GitHub
+
+    steps:
+      # Baixa o código do repositório para a máquina virtual
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      # Executa o docker build do backend
+      - name: Build da imagem do Backend
+        run: docker build -t gastos-backend:latest ./backend
+
+  # Job 2: Build do Frontend
+  build-frontend:
+    name: Build Frontend
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Build da imagem do Frontend
+        run: docker build -t gastos-frontend:latest ./frontend

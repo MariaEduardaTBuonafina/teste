@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gerenciador de Gastos Pessoais</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+  <style>
+    /* =====================================================
+       VARIÁVEIS DE COR
+    ===================================================== */
+    :root {
+      --fundo: #0f172a;
+      --fundo2: #1e293b;
+      --cartao: #1e293b;
+      --borda: #334155;
+      --verde: #22c55e;
+      --verde-fundo: #14532d22;
+      --vermelho: #ef4444;
+      --vermelho-fundo: #7f1d1d22;
+      --azul: #3b82f6;
+      --texto: #f1f5f9;
+      --texto-suave: #94a3b8;
+      --texto-muito-suave: #475569;
+    }
+
+    /* =====================================================
+       RESET E BASE
+    ===================================================== */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background-color: var(--fundo);
+      color: var(--texto);
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+    }
+
+    /* =====================================================
+       CABEÇALHO
+    ===================================================== */
+    header {
+      background-color: var(--fundo2);
+      border-bottom: 1px solid var(--borda);
+      padding: 24px 20px;
+      text-align: center;
+    }
+
+    header h1 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: var(--texto);
+      margin-bottom: 4px;
+    }
+
+    header p {
+      color: var(--texto-suave);
+      font-size: 0.875rem;
+    }
+
+    /* =====================================================
+       LAYOUT PRINCIPAL
+    ===================================================== */
+    main {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 32px 20px;
+    }
+
+    /* =====================================================
+       CARDS DE RESUMO (saldo, total do mês)
+    ===================================================== */
+    .resumo-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .resumo-card {
+      background-color: var(--cartao);
+      border: 1px solid var(--borda);
+      border-radius: 12px;
+      padding: 20px;
+    }
+
+    .resumo-card .label {
+      font-size: 0.75rem;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--texto-suave);
+      margin-bottom: 8px;
+    }
+
+    .resumo-card .valor {
+      font-size: 1.6rem;
+      font-weight: 700;
+    }
+
+    .resumo-card .valor.positivo { color: var(--verde); }
+    .resumo-card .valor.negativo { color: var(--vermelho); }
+    .resumo-card .valor.neutro   { color: var(--texto); }
+
+    /* =====================================================
+       FORMULÁRIO DE ADIÇÃO
+    ===================================================== */
+    .form-card {
+      background-color: var(--cartao);
+      border: 1px solid var(--borda);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 32px;
+    }
+
+    .form-card h2 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 20px;
+      color: var(--texto);
+    }
+
+    .form-linha {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    /* Em telas pequenas, empilha os campos */
+    @media (max-width: 500px) {
+      .form-linha { grid-template-columns: 1fr; }
+    }
+
+    .form-grupo {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .form-grupo label {
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--texto-suave);
+    }
+
+    .form-grupo input,
+    .form-grupo select {
+      background-color: var(--fundo);
+      border: 1px solid var(--borda);
+      border-radius: 8px;
+      padding: 10px 14px;
+      color: var(--texto);
+      font-size: 0.9rem;
+      font-family: 'Inter', sans-serif;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    /* Destaca o campo selecionado */
+    .form-grupo input:focus,
+    .form-grupo select:focus {
+      border-color: var(--azul);
+    }
+
+    /* Cor do placeholder */
+    .form-grupo input::placeholder {
+      color: var(--texto-muito-suave);
+    }
+
+    /* Deixa o fundo do <select> igual ao do input */
+    .form-grupo select option {
+      background-color: var(--fundo2);
+    }
+
+    /* Botões de tipo (Receita / Gasto) — ficam juntos no topo do form */
+    .tipo-toggle {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .btn-tipo {
+      flex: 1;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid var(--borda);
+      background: transparent;
+      color: var(--texto-suave);
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-tipo.ativo-receita {
+      background-color: var(--verde-fundo);
+      border-color: var(--verde);
+      color: var(--verde);
+    }
+
+    .btn-tipo.ativo-gasto {
+      background-color: var(--vermelho-fundo);
+      border-color: var(--vermelho);
+      color: var(--vermelho);
+    }
+
+    /* Botão de salvar */
+    .btn-salvar {
+      width: 100%;
+      margin-top: 12px;
+      padding: 12px;
+      background-color: var(--azul);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+
+    .btn-salvar:hover { opacity: 0.85; }
+
+    /* Mensagem de feedback (sucesso / erro) */
+    #feedback {
+      margin-top: 12px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      display: none;
+    }
+
+    #feedback.sucesso {
+      background-color: var(--verde-fundo);
+      color: var(--verde);
+      border: 1px solid var(--verde);
+    }
+
+    #feedback.erro {
+      background-color: var(--vermelho-fundo);
+      color: var(--vermelho);
+      border: 1px solid var(--vermelho);
+    }
+
+    /* =====================================================
+       LISTA DE LANÇAMENTOS
+    ===================================================== */
+    .lista-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .lista-header h2 {
+      font-size: 1rem;
+      font-weight: 600;
+    }
+
+    .lista-header span {
+      font-size: 0.8rem;
+      color: var(--texto-suave);
+    }
+
+    /* Mensagem quando não há lançamentos */
+    #vazio {
+      text-align: center;
+      padding: 48px 20px;
+      color: var(--texto-suave);
+      background-color: var(--cartao);
+      border: 1px dashed var(--borda);
+      border-radius: 12px;
+    }
+
+    #vazio p { font-size: 0.9rem; margin-top: 8px; }
+
+    /* Cada item da lista */
+    .item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background-color: var(--cartao);
+      border: 1px solid var(--borda);
+      border-radius: 10px;
+      padding: 16px 20px;
+      margin-bottom: 10px;
+      transition: border-color 0.2s;
+    }
+
+    .item:hover { border-color: #475569; }
+
+    /* Barra colorida à esquerda indicando tipo */
+    .item.receita { border-left: 3px solid var(--verde); }
+    .item.gasto   { border-left: 3px solid var(--vermelho); }
+
+    .item-info { flex: 1; }
+
+    .item-descricao {
+      font-size: 0.9rem;
+      font-weight: 500;
+      margin-bottom: 4px;
+    }
+
+    .item-meta {
+      font-size: 0.75rem;
+      color: var(--texto-suave);
+      display: flex;
+      gap: 8px;
+    }
+
+    /* Badge colorido de tipo */
+    .badge {
+      font-size: 0.65rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      padding: 2px 8px;
+      border-radius: 999px;
+    }
+
+    .badge.receita {
+      background-color: var(--verde-fundo);
+      color: var(--verde);
+    }
+
+    .badge.gasto {
+      background-color: var(--vermelho-fundo);
+      color: var(--vermelho);
+    }
+
+    .item-direita {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .item-valor {
+      font-size: 1rem;
+      font-weight: 700;
+      min-width: 100px;
+      text-align: right;
+    }
+
+    .item-valor.receita { color: var(--verde); }
+    .item-valor.gasto   { color: var(--vermelho); }
+
+    /* Botão de excluir */
+    .btn-excluir {
+      background: transparent;
+      border: 1px solid var(--borda);
+      border-radius: 6px;
+      color: var(--texto-suave);
+      width: 32px;
+      height: 32px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .btn-excluir:hover {
+      background-color: var(--vermelho-fundo);
+      border-color: var(--vermelho);
+      color: var(--vermelho);
+    }
+
+    /* =====================================================
+       RODAPÉ
+    ===================================================== */
+    footer {
+      border-top: 1px solid var(--borda);
+      padding: 24px 20px;
+      text-align: center;
+      color: var(--texto-suave);
+      font-size: 0.8rem;
+      margin-top: 40px;
+    }
+
+    footer .equipe { margin-top: 4px; font-weight: 300; }
+  </style>
+</head>
+
+<body>
+
+  <header>
+    <h1>💰 Gerenciador de Gastos Pessoais</h1>
+    <p>Projeto AV2 — DevOps</p>
+  </header>
+
+  <main>
+
+    <!-- ================================================
+         CARDS DE RESUMO
+    ================================================= -->
+    <div class="resumo-grid">
+      <div class="resumo-card">
+        <div class="label">💳 Saldo Atual</div>
+        <div class="valor neutro" id="saldo-atual">R$ 0,00</div>
+      </div>
+      <div class="resumo-card">
+        <div class="label">📅 Receitas do Mês</div>
+        <div class="valor positivo" id="receitas-mes">R$ 0,00</div>
+      </div>
+      <div class="resumo-card">
+        <div class="label">📅 Gastos do Mês</div>
+        <div class="valor negativo" id="gastos-mes">R$ 0,00</div>
+      </div>
+      <div class="resumo-card">
+        <div class="label">📊 Saldo do Mês</div>
+        <div class="valor neutro" id="saldo-mes">R$ 0,00</div>
+      </div>
+    </div>
+
+    <!-- ================================================
+         FORMULÁRIO DE ADIÇÃO
+    ================================================= -->
+    <div class="form-card">
+      <h2>➕ Adicionar Lançamento</h2>
+
+      <!-- Botões para escolher o tipo antes de preencher -->
+      <div class="tipo-toggle">
+        <button class="btn-tipo ativo-receita" id="btn-receita" onclick="selecionarTipo('receita')">
+          ↑ Receita
+        </button>
+        <button class="btn-tipo" id="btn-gasto" onclick="selecionarTipo('gasto')">
+          ↓ Gasto
+        </button>
+      </div>
+
+      <!-- Campo oculto que guarda o tipo selecionado -->
+      <input type="hidden" id="tipo-selecionado" value="receita" />
+
+      <div class="form-linha">
+        <div class="form-grupo">
+          <label for="descricao">Descrição</label>
+          <input
+            type="text"
+            id="descricao"
+            placeholder="Ex: Salário, Mercado, Conta de luz..."
+            maxlength="60"
+          />
+        </div>
+        <div class="form-grupo">
+          <label for="valor">Valor (R$)</label>
+          <input
+            type="number"
+            id="valor"
+            placeholder="0,00"
+            min="0.01"
+            step="0.01"
+          />
+        </div>
+      </div>
+
+      <button class="btn-salvar" onclick="adicionarLancamento()">
+        Salvar Lançamento
+      </button>
+
+      <!-- Mensagem de sucesso ou erro -->
+      <div id="feedback"></div>
+    </div>
+
+    <!-- ================================================
+         LISTA DE LANÇAMENTOS
+    ================================================= -->
+<div class="lista-header">
+  <h2>📋 Lançamentos</h2>
+
+  <div style="display:flex; gap:10px; align-items:center;">
+    <span id="contagem">0 registros</span>
+
+    <button
+      onclick="apagarTodos()"
+      style="
+        background:#7f1d1d22;
+        border:1px solid #ef4444;
+        color:#ef4444;
+        padding:8px 12px;
+        border-radius:8px;
+        cursor:pointer;
+        font-size:0.8rem;
+      "
+    >
+      🗑️ Apagar Tudo
+    </button>
+  </div>
+</div>
+
+    <!-- Aparece quando não há lançamentos -->
+    <div id="vazio">
+      <div style="font-size: 2rem">📭</div>
+      <p>Nenhum lançamento ainda.<br>Adicione seu primeiro registro acima!</p>
+    </div>
+
+    <!-- Os itens são inseridos aqui pelo JavaScript -->
+    <div id="lista"></div>
+
+  </main>
+
+  <footer>
+    <div>Projeto Final — Disciplina de DevOps</div>
+    <div class="equipe">
+      Squad: Maria Eduarda Trevizane · Maria Clara Trevizane · Luís Fernando Andrade · João Vitor Rodrigues
+    </div>
+  </footer>
+
+  <script>
+    // =====================================================
+    // CONFIGURAÇÃO
+    // =====================================================
+    const API = 'http://localhost:5000';
+
+    // Tipo selecionado atualmente no formulário
+    let tipoAtual = 'receita';
+
+    // =====================================================
+    // SELECIONAR TIPO (Receita ou Gasto)
+    // =====================================================
+    function selecionarTipo(tipo) {
+      tipoAtual = tipo;
+      document.getElementById('tipo-selecionado').value = tipo;
+
+      const btnReceita = document.getElementById('btn-receita');
+      const btnGasto   = document.getElementById('btn-gasto');
+
+      // Remove as classes ativas de ambos os botões
+      btnReceita.className = 'btn-tipo';
+      btnGasto.className   = 'btn-tipo';
+
+      // Adiciona a classe ativa no botão correto
+      if (tipo === 'receita') {
+        btnReceita.classList.add('ativo-receita');
+      } else {
+        btnGasto.classList.add('ativo-gasto');
+      }
+    }
+
+    // =====================================================
+    // FORMATAR VALOR em Real Brasileiro
+    // =====================================================
+    function formatarReais(valor) {
+      return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    }
+
+    // =====================================================
+    // MOSTRAR MENSAGEM DE FEEDBACK
+    // =====================================================
+    function mostrarFeedback(msg, tipo) {
+      const el = document.getElementById('feedback');
+      el.textContent = msg;
+      el.className = tipo;           // "sucesso" ou "erro"
+      el.style.display = 'block';
+      setTimeout(() => { el.style.display = 'none'; }, 3000); // some após 3s
+    }
+
+    // =====================================================
+    // ADICIONAR LANÇAMENTO
+    // =====================================================
+    async function adicionarLancamento() {
+      const descricao = document.getElementById('descricao').value.trim();
+      const valor     = parseFloat(document.getElementById('valor').value);
+      const tipo      = tipoAtual;
+
+      // Validação no frontend antes de enviar
+      if (!descricao) {
+        mostrarFeedback('⚠️ Preencha a descrição!', 'erro');
+        return;
+      }
+      if (!valor || valor <= 0) {
+        mostrarFeedback('⚠️ Informe um valor válido!', 'erro');
+        return;
+      }
+
+      try {
+        // fetch com método POST envia dados para o backend
+        const resposta = await fetch(`${API}/lancamentos`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }, // Informa que estamos enviando JSON
+          body: JSON.stringify({ descricao, valor, tipo })  // Converte objeto para string JSON
+        });
+
+        if (!resposta.ok) throw new Error('Erro ao salvar');
+
+        // Limpa os campos do formulário
+        document.getElementById('descricao').value = '';
+        document.getElementById('valor').value     = '';
+
+        mostrarFeedback('✅ Lançamento adicionado com sucesso!', 'sucesso');
+
+        // Recarrega a lista e o resumo
+        await carregarTudo();
+
+      } catch (erro) {
+        mostrarFeedback('❌ Erro ao conectar com o servidor.', 'erro');
+      }
+    }
+
+    // =====================================================
+    // EXCLUIR LANÇAMENTO
+    // =====================================================
+    async function excluirLancamento(id) {
+      // Pede confirmação antes de excluir
+      if (!confirm('Tem certeza que deseja excluir este lançamento?')) return;
+
+      try {
+        // fetch com método DELETE para a rota com o ID
+        const resposta = await fetch(`${API}/lancamentos/${id}`, {
+          method: 'DELETE'
+        });
+
+        if (!resposta.ok) throw new Error('Erro ao excluir');
+
+        await carregarTudo(); // Recarrega tudo
+
+      } catch (erro) {
+        alert('Erro ao excluir. Verifique se o servidor está rodando.');
+      }
+    }
+
+    // =====================================================
+    // RENDERIZAR A LISTA DE LANÇAMENTOS
+    // =====================================================
+    function renderizarLista(lancamentos) {
+      const lista   = document.getElementById('lista');
+      const vazio   = document.getElementById('vazio');
+      const contagem = document.getElementById('contagem');
+
+      contagem.textContent = `${lancamentos.length} registro${lancamentos.length !== 1 ? 's' : ''}`;
+
+      if (lancamentos.length === 0) {
+        vazio.style.display = 'block';
+        lista.innerHTML = '';
+        return;
+      }
+
+      vazio.style.display = 'none';
+
+      // Invertemos a ordem para mostrar os mais recentes primeiro
+      const ordenados = [...lancamentos].reverse();
+
+      lista.innerHTML = ordenados.map(item => `
+        <div class="item ${item.tipo}">
+          <div class="item-info">
+            <div class="item-descricao">${item.descricao}</div>
+            <div class="item-meta">
+              <span class="badge ${item.tipo}">${item.tipo}</span>
+              <span>📅 ${item.data}</span>
+            </div>
+          </div>
+          <div class="item-direita">
+            <div class="item-valor ${item.tipo}">
+              ${item.tipo === 'gasto' ? '−' : '+'}${formatarReais(item.valor)}
+            </div>
+            <button class="btn-excluir" onclick="excluirLancamento(${item.id})" title="Excluir">
+              ✕
+            </button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // =====================================================
+// APAGAR TODOS OS LANÇAMENTOS
+// =====================================================
+async function apagarTodos() {
+
+  if (!confirm('Tem certeza que deseja apagar TODOS os lançamentos?')) {
+    return;
+  }
+
+  try {
+
+    const resposta = await fetch(`${API}/lancamentos`, {
+      method: 'DELETE'
+    });
+
+    if (!resposta.ok) {
+      throw new Error('Erro ao apagar');
+    }
+
+    mostrarFeedback(
+      '🗑️ Todos os lançamentos foram removidos!',
+      'sucesso'
+    );
+
+    await carregarTudo();
+
+  } catch (erro) {
+
+    mostrarFeedback(
+      '❌ Erro ao apagar os lançamentos.',
+      'erro'
+    );
+
+  }
+}
+
+    // =====================================================
+    // ATUALIZAR CARDS DE RESUMO
+    // =====================================================
+    function atualizarResumo(resumo) {
+      const saldoAtual = document.getElementById('saldo-atual');
+      const saldoMes   = document.getElementById('saldo-mes');
+
+      saldoAtual.textContent = formatarReais(resumo.saldo_atual);
+      document.getElementById('receitas-mes').textContent = formatarReais(resumo.receitas_mes);
+      document.getElementById('gastos-mes').textContent   = formatarReais(resumo.gastos_mes);
+      saldoMes.textContent = formatarReais(resumo.saldo_mes);
+
+      // Muda a cor do saldo dependendo de ser positivo ou negativo
+      saldoAtual.className = `valor ${resumo.saldo_atual >= 0 ? 'positivo' : 'negativo'}`;
+      saldoMes.className   = `valor ${resumo.saldo_mes   >= 0 ? 'positivo' : 'negativo'}`;
+    }
+
+    // =====================================================
+    // CARREGAR TUDO (lançamentos + resumo)
+    // =====================================================
+    async function carregarTudo() {
+      try {
+        // Fazemos as duas requisições ao mesmo tempo para ser mais rápido
+        const [resLancamentos, resResumo] = await Promise.all([
+          fetch(`${API}/lancamentos`),
+          fetch(`${API}/resumo`)
+        ]);
+
+        const lancamentos = await resLancamentos.json();
+        const resumo      = await resResumo.json();
+
+        renderizarLista(lancamentos);
+        atualizarResumo(resumo);
+
+      } catch (erro) {
+        console.error('Erro ao carregar dados:', erro);
+      }
+    }
+
+    // Carrega os dados ao abrir a página
+    carregarTudo();
+  </script>
+
+</body>
+</html>
