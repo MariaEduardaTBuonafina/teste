@@ -6,4 +6,4 @@ FROM nginx:alpine
 COPY . /usr/share/nginx/html/
 
 # Porta padrão do Nginx
-EXPOSE 80
+EXPOSE 80ng generate service services/api
