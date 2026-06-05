@@ -1,3 +1,5 @@
+teste pipeline
+
 # 💰 Gerenciador de Gastos Pessoais
 
 Projeto desenvolvido para a disciplina de **DevOps**, com o objetivo de aplicar conceitos de conteinerização utilizando Docker, integração entre frontend e backend, persistência de dados e desenvolvimento de APIs REST.
