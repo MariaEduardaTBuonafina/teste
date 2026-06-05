@@ -12,3 +12,4 @@ Thumbs.db
 # Banco de dados
 *.db
 *.sqlite
+gastos.db

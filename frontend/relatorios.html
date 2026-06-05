@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Relatórios Mensais</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+
+:root{
+  --fundo:#0f172a;
+  --fundo2:#1e293b;
+  --cartao:#1e293b;
+  --borda:#334155;
+
+  --verde:#22c55e;
+  --vermelho:#ef4444;
+  --azul:#3b82f6;
+
+  --texto:#f8fafc;
+  --texto-suave:#94a3b8;
+}
+
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+}
+
+body{
+  background:var(--fundo);
+  color:var(--texto);
+  font-family:'Inter',sans-serif;
+}
+
+header{
+  background:var(--fundo2);
+  border-bottom:1px solid var(--borda);
+  padding:25px;
+  text-align:center;
+}
+
+header h1{
+  font-size:1.8rem;
+}
+
+header p{
+  color:var(--texto-suave);
+  margin-top:5px;
+}
+
+main{
+  max-width:1000px;
+  margin:auto;
+  padding:30px 20px;
+}
+
+.botoes-topo{
+  display:flex;
+  gap:10px;
+  margin-bottom:25px;
+}
+
+.btn{
+  background:var(--azul);
+  color:white;
+  border:none;
+  padding:10px 16px;
+  border-radius:8px;
+  cursor:pointer;
+  text-decoration:none;
+  font-weight:600;
+}
+
+.btn:hover{
+  opacity:.9;
+}
+
+.resumo-atual{
+  background:var(--cartao);
+  border:1px solid var(--borda);
+  border-radius:12px;
+  padding:25px;
+  margin-bottom:25px;
+}
+
+.resumo-atual h2{
+  margin-bottom:10px;
+}
+
+.grid-resumo{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+  gap:15px;
+  margin-top:20px;
+}
+
+.card-mini{
+  background:var(--fundo);
+  border:1px solid var(--borda);
+  border-radius:10px;
+  padding:15px;
+}
+
+.card-mini .titulo{
+  font-size:.8rem;
+  color:var(--texto-suave);
+  margin-bottom:8px;
+}
+
+.card-mini .valor{
+  font-size:1.4rem;
+  font-weight:700;
+}
+
+.positivo{
+  color:var(--verde);
+}
+
+.negativo{
+  color:var(--vermelho);
+}
+
+.lista-relatorios{
+  display:flex;
+  flex-direction:column;
+  gap:18px;
+}
+
+.relatorio-card{
+  background:var(--cartao);
+  border:1px solid var(--borda);
+  border-radius:14px;
+  padding:22px;
+}
+
+.relatorio-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:20px;
+}
+
+.relatorio-header h3{
+  font-size:1.2rem;
+}
+
+.badge{
+  background:var(--azul);
+  color:white;
+  font-size:.75rem;
+  padding:5px 10px;
+  border-radius:999px;
+}
+
+.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+  gap:15px;
+}
+
+.info{
+  background:var(--fundo);
+  border:1px solid var(--borda);
+  border-radius:10px;
+  padding:14px;
+}
+
+.info small{
+  color:var(--texto-suave);
+  display:block;
+  margin-bottom:6px;
+}
+
+.info strong{
+  font-size:1.1rem;
+}
+
+.vazio{
+  text-align:center;
+  padding:50px;
+  background:var(--cartao);
+  border:1px dashed var(--borda);
+  border-radius:12px;
+}
+
+footer{
+  margin-top:40px;
+  text-align:center;
+  color:var(--texto-suave);
+  padding:25px;
+}
+
+</style>
+</head>
+<body>
+
+<header>
+  <h1>📊 Relatórios Mensais</h1>
+  <p>Análise financeira por mês</p>
+</header>
+
+<main>
+
+<div class="botoes-topo">
+  <a href="index.html" class="btn">
+    ← Voltar para Lançamentos
+  </a>
+</div>
+
+<div class="resumo-atual">
+
+  <h2>📅 Mês Atual</h2>
+
+  <div class="grid-resumo">
+
+    <div class="card-mini">
+      <div class="titulo">Receitas</div>
+      <div id="receitasAtual" class="valor positivo">
+        R$ 0,00
+      </div>
+    </div>
+
+    <div class="card-mini">
+      <div class="titulo">Gastos</div>
+      <div id="gastosAtual" class="valor negativo">
+        R$ 0,00
+      </div>
+    </div>
+
+    <div class="card-mini">
+      <div class="titulo">Saldo</div>
+      <div id="saldoAtual" class="valor">
+        R$ 0,00
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<h2 style="margin-bottom:20px;">
+📚 Histórico de Relatórios
+</h2>
+
+<div id="relatorios" class="lista-relatorios"></div>
+
+</main>
+
+<footer>
+Projeto AV2 DevOps • Gerenciador de Gastos
+</footer>
+
+<script>
+
+const API = "http://localhost:5000";
+
+function moeda(valor){
+  return valor.toLocaleString(
+    'pt-BR',
+    {
+      style:'currency',
+      currency:'BRL'
+    }
+  );
+}
+
+function formatarMes(mes){
+
+  const partes = mes.split('-');
+
+  const ano = partes[0];
+  const numeroMes = parseInt(partes[1]);
+
+  const nomes = [
+    "Janeiro",
+    "Fevereiro",
+    "Março",
+    "Abril",
+    "Maio",
+    "Junho",
+    "Julho",
+    "Agosto",
+    "Setembro",
+    "Outubro",
+    "Novembro",
+    "Dezembro"
+  ];
+
+  return `${nomes[numeroMes-1]} ${ano}`;
+}
+
+async function carregarRelatorios(){
+
+  try{
+
+    const resposta = await fetch(`${API}/relatorios`);
+
+    const relatorios = await resposta.json();
+
+    const container =
+      document.getElementById("relatorios");
+
+    if(relatorios.length === 0){
+
+      container.innerHTML = `
+        <div class="vazio">
+          <h2>📭 Nenhum relatório disponível</h2>
+          <p>
+            Adicione lançamentos para gerar relatórios mensais.
+          </p>
+        </div>
+      `;
+
+      return;
+    }
+
+    const atual = relatorios[0];
+
+    document.getElementById("receitasAtual")
+      .textContent = moeda(atual.receitas);
+
+    document.getElementById("gastosAtual")
+      .textContent = moeda(atual.gastos);
+
+    const saldoAtual =
+      document.getElementById("saldoAtual");
+
+    saldoAtual.textContent =
+      moeda(atual.saldo);
+
+    saldoAtual.className =
+      atual.saldo >= 0
+      ? "valor positivo"
+      : "valor negativo";
+
+    container.innerHTML = relatorios.map((mes,index)=>{
+
+      const aberto =
+        index === 0
+        ? '<span class="badge">Mês Atual</span>'
+        : '';
+
+      const maiorGasto =
+        mes.maior_gasto
+        ? `${mes.maior_gasto.descricao} (${moeda(mes.maior_gasto.valor)})`
+        : 'Nenhum gasto';
+
+      return `
+      <div class="relatorio-card">
+
+        <div class="relatorio-header">
+
+          <h3>
+            ${formatarMes(mes.mes)}
+          </h3>
+
+          ${aberto}
+
+        </div>
+
+        <div class="grid">
+
+          <div class="info">
+            <small>Receitas</small>
+            <strong class="positivo">
+              ${moeda(mes.receitas)}
+            </strong>
+          </div>
+
+          <div class="info">
+            <small>Gastos</small>
+            <strong class="negativo">
+              ${moeda(mes.gastos)}
+            </strong>
+          </div>
+
+          <div class="info">
+            <small>Saldo</small>
+            <strong class="${
+              mes.saldo >= 0
+              ? 'positivo'
+              : 'negativo'
+            }">
+              ${moeda(mes.saldo)}
+            </strong>
+          </div>
+
+          <div class="info">
+            <small>Maior Gasto</small>
+            <strong>
+              ${maiorGasto}
+            </strong>
+          </div>
+
+        </div>
+
+      </div>
+      `;
+
+    }).join('');
+
+  }
+
+  catch(erro){
+
+    console.error(erro);
+
+    document.getElementById("relatorios").innerHTML = `
+      <div class="vazio">
+        <h2>❌ Erro</h2>
+        <p>
+          Não foi possível carregar os relatórios.
+        </p>
+      </div>
+    `;
+
+  }
+
+}
+
+carregarRelatorios();
+
+</script>
+
+</body>
+</html>

@@ -3,7 +3,7 @@
 FROM nginx:alpine
 
 # Copiamos nosso HTML para dentro do servidor Nginx
-COPY index.html /usr/share/nginx/html/index.html
+COPY . /usr/share/nginx/html/
 
 # Porta padrão do Nginx
 EXPOSE 80

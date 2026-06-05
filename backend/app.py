@@ -1,137 +1,281 @@
-# Importamos as ferramentas necessárias
-from flask import Flask, jsonify, request  # request lê dados enviados pelo frontend
-from flask_cors import CORS                 # Permite comunicação entre frontend e backend
-import os                                   # Acessa variáveis de ambiente
-from datetime import datetime               # Trabalha com datas
+from flask import Flask, jsonify, request
+from flask_cors import CORS
+from datetime import datetime
+import os
 
-# Criamos a aplicação Flask
+from database import get_connection, init_db
+
 app = Flask(__name__)
 CORS(app)
 
-# -------------------------------------------------------
-# BANCO DE DADOS EM MEMÓRIA
-# Em um projeto real, usaríamos um banco como PostgreSQL.
-# Para simplificar, guardamos os lançamentos em uma lista Python.
-# A lista reinicia quando o servidor reinicia — isso é esperado para este projeto.
-# -------------------------------------------------------
-lancamentos = []   # Lista que guarda todos os lançamentos (gastos e receitas)
-proximo_id = 1     # Contador para gerar IDs únicos para cada lançamento
+init_db()
 
-# -------------------------------------------------------
-# ROTAS (endpoints) da API
-# -------------------------------------------------------
+# ==========================================
+# ROTA INICIAL
+# ==========================================
 
-# Rota principal — testa se o servidor está no ar
-@app.route('/')
-def inicio():
-    return jsonify({"mensagem": "API do Gerenciador de Gastos funcionando!", "status": "ok"})
+@app.route("/")
+def home():
+    return jsonify({
+        "mensagem": "API funcionando",
+        "status": "ok"
+    })
 
 
-# GET /lancamentos — retorna todos os lançamentos cadastrados
-@app.route('/lancamentos', methods=['GET'])
-def get_lancamentos():
-    return jsonify(lancamentos)
+# ==========================================
+# LISTAR LANÇAMENTOS
+# ==========================================
+
+@app.route("/lancamentos", methods=["GET"])
+def listar_lancamentos():
+
+    conn = get_connection()
+
+    lancamentos = conn.execute("""
+        SELECT *
+        FROM lancamentos
+        ORDER BY id ASC
+    """).fetchall()
+
+    conn.close()
+
+    return jsonify([dict(l) for l in lancamentos])
 
 
-# POST /lancamentos — adiciona um novo lançamento (gasto ou receita)
-@app.route('/lancamentos', methods=['POST'])
-def add_lancamento():
-    global proximo_id  # Precisamos do "global" para modificar a variável de fora da função
+# ==========================================
+# ADICIONAR LANÇAMENTO
+# ==========================================
 
-    # request.get_json() lê o corpo da requisição enviada pelo frontend
+@app.route("/lancamentos", methods=["POST"])
+def adicionar_lancamento():
+
     dados = request.get_json()
 
-    # Validação: verificamos se os campos obrigatórios foram enviados
     if not dados:
         return jsonify({"erro": "Nenhum dado enviado"}), 400
-    if 'descricao' not in dados or not dados['descricao'].strip():
-        return jsonify({"erro": "Descrição é obrigatória"}), 400
-    if 'valor' not in dados:
-        return jsonify({"erro": "Valor é obrigatório"}), 400
-    if 'tipo' not in dados or dados['tipo'] not in ['gasto', 'receita']:
-        return jsonify({"erro": "Tipo deve ser 'gasto' ou 'receita'"}), 400
 
-    # Criamos o objeto do novo lançamento
-    novo = {
-        "id": proximo_id,
-        "descricao": dados['descricao'].strip(),
-        "valor": float(dados['valor']),         # Garantimos que o valor seja número
-        "tipo": dados['tipo'],                  # "gasto" ou "receita"
-        "data": datetime.now().strftime("%d/%m/%Y"),  # Data de hoje formatada
-        "mes": datetime.now().strftime("%Y-%m")       # Mês para filtrar depois (ex: "2025-06")
-    }
+    descricao = dados.get("descricao", "").strip()
+    valor = dados.get("valor")
+    tipo = dados.get("tipo")
+    categoria = dados.get("categoria", "Outros")
 
-    lancamentos.append(novo)  # Adicionamos à lista
-    proximo_id += 1           # Incrementamos o contador de IDs
+    if not descricao:
+        return jsonify({"erro": "Descrição obrigatória"}), 400
 
-    # Retornamos o lançamento criado com status 201 (Created)
-    return jsonify(novo), 201
+    if valor is None:
+        return jsonify({"erro": "Valor obrigatório"}), 400
 
+    if tipo not in ["receita", "gasto"]:
+        return jsonify({"erro": "Tipo inválido"}), 400
 
-# DELETE /lancamentos/<id> — exclui um lançamento pelo ID
-@app.route('/lancamentos/<int:id>', methods=['DELETE'])
-def delete_lancamento(id):
-    global lancamentos
+    agora = datetime.now()
 
-    # Filtramos a lista mantendo todos EXCETO o que tem o ID informado
-    lancamentos_filtrados = [l for l in lancamentos if l['id'] != id]
+    data = agora.strftime("%d/%m/%Y")
+    mes = agora.strftime("%Y-%m")
 
-    # Se o tamanho não mudou, o ID não existia
-    if len(lancamentos_filtrados) == len(lancamentos):
-        return jsonify({"erro": "Lançamento não encontrado"}), 404
+    conn = get_connection()
 
-    lancamentos = lancamentos_filtrados
-    return jsonify({"mensagem": "Lançamento excluído com sucesso"})
+    cursor = conn.cursor()
 
+    cursor.execute("""
+        INSERT INTO lancamentos
+        (descricao, valor, tipo, categoria, data, mes)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, (
+        descricao,
+        float(valor),
+        tipo,
+        categoria,
+        data,
+        mes
+    ))
 
-# DELETE /lancamentos - exclui TODOS os lançamentos
-@app.route('/lancamentos', methods=['DELETE'])
-def delete_todos_lancamentos():
-    global lancamentos
-    global proximo_id
+    conn.commit()
 
-    lancamentos = []
-    proximo_id = 1
+    novo_id = cursor.lastrowid
+
+    conn.close()
 
     return jsonify({
-        "mensagem": "Todos os lançamentos foram excluídos com sucesso"
+        "id": novo_id,
+        "descricao": descricao,
+        "valor": valor,
+        "tipo": tipo,
+        "categoria": categoria,
+        "data": data,
+        "mes": mes
+    }), 201
+
+
+# ==========================================
+# EXCLUIR UM LANÇAMENTO
+# ==========================================
+
+@app.route("/lancamentos/<int:id>", methods=["DELETE"])
+def excluir_lancamento(id):
+
+    conn = get_connection()
+
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        DELETE FROM lancamentos
+        WHERE id = ?
+    """, (id,))
+
+    conn.commit()
+
+    removidos = cursor.rowcount
+
+    conn.close()
+
+    if removidos == 0:
+        return jsonify({
+            "erro": "Lançamento não encontrado"
+        }), 404
+
+    return jsonify({
+        "mensagem": "Lançamento excluído"
     })
 
 
-# GET /resumo — calcula saldo atual e total do mês
-@app.route('/resumo', methods=['GET'])
-def get_resumo():
-    mes_atual = datetime.now().strftime("%Y-%m")  # Mês atual no formato "2025-06"
+# ==========================================
+# EXCLUIR TODOS
+# ==========================================
 
-    total_receitas = 0.0
-    total_gastos = 0.0
-    receitas_mes = 0.0
-    gastos_mes = 0.0
+@app.route("/lancamentos", methods=["DELETE"])
+def excluir_todos():
 
-    # Percorremos todos os lançamentos calculando os totais
-    for l in lancamentos:
-        if l['tipo'] == 'receita':
-            total_receitas += l['valor']
-            if l['mes'] == mes_atual:
-                receitas_mes += l['valor']
-        else:  # gasto
-            total_gastos += l['valor']
-            if l['mes'] == mes_atual:
-                gastos_mes += l['valor']
+    conn = get_connection()
+
+    conn.execute("""
+        DELETE FROM lancamentos
+    """)
+
+    conn.commit()
+    conn.close()
 
     return jsonify({
-        "saldo_atual": round(total_receitas - total_gastos, 2),   # Saldo geral
-        "total_receitas": round(total_receitas, 2),
-        "total_gastos": round(total_gastos, 2),
-        "receitas_mes": round(receitas_mes, 2),                   # Só do mês atual
+        "mensagem": "Todos os lançamentos foram removidos"
+    })
+
+
+# ==========================================
+# RESUMO GERAL
+# ==========================================
+
+@app.route("/resumo", methods=["GET"])
+def resumo():
+
+    conn = get_connection()
+
+    receitas = conn.execute("""
+        SELECT COALESCE(SUM(valor),0)
+        FROM lancamentos
+        WHERE tipo='receita'
+    """).fetchone()[0]
+
+    gastos = conn.execute("""
+        SELECT COALESCE(SUM(valor),0)
+        FROM lancamentos
+        WHERE tipo='gasto'
+    """).fetchone()[0]
+
+    mes_atual = datetime.now().strftime("%Y-%m")
+
+    receitas_mes = conn.execute("""
+        SELECT COALESCE(SUM(valor),0)
+        FROM lancamentos
+        WHERE tipo='receita'
+        AND mes=?
+    """, (mes_atual,)).fetchone()[0]
+
+    gastos_mes = conn.execute("""
+        SELECT COALESCE(SUM(valor),0)
+        FROM lancamentos
+        WHERE tipo='gasto'
+        AND mes=?
+    """, (mes_atual,)).fetchone()[0]
+
+    conn.close()
+
+    return jsonify({
+        "saldo_atual": round(receitas - gastos, 2),
+        "total_receitas": round(receitas, 2),
+        "total_gastos": round(gastos, 2),
+        "receitas_mes": round(receitas_mes, 2),
         "gastos_mes": round(gastos_mes, 2),
-        "saldo_mes": round(receitas_mes - gastos_mes, 2)          # Saldo só do mês
+        "saldo_mes": round(receitas_mes - gastos_mes, 2)
     })
 
 
-# -------------------------------------------------------
-# INICIALIZAÇÃO DO SERVIDOR
-# -------------------------------------------------------
-if __name__ == '__main__':
-    porta = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=porta, debug=True)
+# ==========================================
+# RELATÓRIOS MENSAIS
+# ==========================================
+
+@app.route("/relatorios", methods=["GET"])
+def relatorios():
+
+    conn = get_connection()
+
+    meses = conn.execute("""
+        SELECT DISTINCT mes
+        FROM lancamentos
+        ORDER BY mes DESC
+    """).fetchall()
+
+    resultado = []
+
+    for m in meses:
+
+        mes = m["mes"]
+
+        receitas = conn.execute("""
+            SELECT COALESCE(SUM(valor),0)
+            FROM lancamentos
+            WHERE tipo='receita'
+            AND mes=?
+        """, (mes,)).fetchone()[0]
+
+        gastos = conn.execute("""
+            SELECT COALESCE(SUM(valor),0)
+            FROM lancamentos
+            WHERE tipo='gasto'
+            AND mes=?
+        """, (mes,)).fetchone()[0]
+
+        maior_gasto = conn.execute("""
+            SELECT descricao, valor
+            FROM lancamentos
+            WHERE tipo='gasto'
+            AND mes=?
+            ORDER BY valor DESC
+            LIMIT 1
+        """, (mes,)).fetchone()
+
+        resultado.append({
+            "mes": mes,
+            "receitas": receitas,
+            "gastos": gastos,
+            "saldo": receitas - gastos,
+            "maior_gasto": dict(maior_gasto) if maior_gasto else None
+        })
+
+    conn.close()
+
+    return jsonify(resultado)
+
+
+# ==========================================
+# START
+# ==========================================
+
+if __name__ == "__main__":
+
+    porta = int(os.environ.get("PORT", 5000))
+
+    app.run(
+        host="0.0.0.0",
+        port=porta,
+        debug=True
+    )
