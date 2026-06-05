@@ -27,7 +27,7 @@ def home():
 # ==========================================
 
 @app.route("/lancamentos", methods=["GET"])
-def listar_lancamentos():
+def listar_lancamentos()
 
     conn = get_connection()
 
