@@ -1,9 +1,16 @@
-# Nginx: servidor web leve e rápido
-# "alpine" é uma versão ultra-leve do Linux (~5MB)
+FROM node:20-alpine AS build
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm install
+
+COPY . .
+
+RUN npm run build
+
 FROM nginx:alpine
 
-# Copiamos nosso HTML para dentro do servidor Nginx
-COPY . /usr/share/nginx/html/
+COPY --from=build /app/dist/frontend/browser /usr/share/nginx/html
 
-# Porta padrão do Nginx
 EXPOSE 80

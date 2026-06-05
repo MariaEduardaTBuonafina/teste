@@ -1,0 +1,72 @@
+<header>
+  <nav>
+    <a routerLink="/">Início</a>
+    <a routerLink="/relatorios">Relatórios</a>
+  </nav>
+
+  <h1>📊 Relatórios Mensais</h1>
+  <p>Acompanhe suas receitas, gastos e saldo por mês</p>
+</header>
+
+<main>
+  <section class="topo">
+    <h2>Resumo por mês</h2>
+
+    <button type="button" (click)="carregarRelatorios()">
+      Atualizar
+    </button>
+  </section>
+
+  <section *ngIf="carregando" class="estado">
+    Carregando relatórios...
+  </section>
+
+  <section *ngIf="erro" class="estado erro">
+    {{ erro }}
+  </section>
+
+  <section *ngIf="!carregando && !erro && relatorios.length === 0" class="estado">
+    Nenhum relatório encontrado. Cadastre alguns lançamentos primeiro.
+  </section>
+
+  <section class="grid" *ngIf="!carregando && !erro && relatorios.length > 0">
+    <div class="card" *ngFor="let item of relatorios">
+      <div class="mes">
+        {{ item.mes }}
+      </div>
+
+      <div class="linha">
+        <span>Receitas</span>
+        <strong class="positivo">
+          {{ formatarReais(item.receitas) }}
+        </strong>
+      </div>
+
+      <div class="linha">
+        <span>Gastos</span>
+        <strong class="negativo">
+          {{ formatarReais(item.gastos) }}
+        </strong>
+      </div>
+
+      <div class="linha total">
+        <span>Saldo</span>
+        <strong [class.positivo]="item.saldo >= 0" [class.negativo]="item.saldo < 0">
+          {{ formatarReais(item.saldo) }}
+        </strong>
+      </div>
+
+      <div class="maior-gasto" *ngIf="item.maior_gasto">
+        <span>Maior gasto</span>
+        <strong>
+          {{ item.maior_gasto.descricao }} —
+          {{ formatarReais(item.maior_gasto.valor) }}
+        </strong>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div>Projeto Final — Disciplina de DevOps</div>
+</footer>
