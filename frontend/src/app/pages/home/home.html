@@ -1,1 +1,163 @@
-<p>home works!</p>
+<header>
+  <nav>
+    <a routerLink="/">Início</a>
+    <a routerLink="/relatorios">Relatórios</a>
+  </nav>
+
+  <h1>💰 Gerenciador de Gastos Pessoais</h1>
+  <p>Projeto AV2 — DevOps</p>
+</header>
+
+<main>
+  <section class="resumo-grid">
+    <div class="resumo-card">
+      <div class="label">💳 Saldo Atual</div>
+      <div class="valor" [class.positivo]="resumo.saldo_atual >= 0" [class.negativo]="resumo.saldo_atual < 0">
+        {{ formatarReais(resumo.saldo_atual) }}
+      </div>
+    </div>
+
+    <div class="resumo-card">
+      <div class="label">📅 Receitas do Mês</div>
+      <div class="valor positivo">
+        {{ formatarReais(resumo.receitas_mes) }}
+      </div>
+    </div>
+
+    <div class="resumo-card">
+      <div class="label">📅 Gastos do Mês</div>
+      <div class="valor negativo">
+        {{ formatarReais(resumo.gastos_mes) }}
+      </div>
+    </div>
+
+    <div class="resumo-card">
+      <div class="label">📊 Saldo do Mês</div>
+      <div class="valor" [class.positivo]="resumo.saldo_mes >= 0" [class.negativo]="resumo.saldo_mes < 0">
+        {{ formatarReais(resumo.saldo_mes) }}
+      </div>
+    </div>
+  </section>
+
+  <section class="form-card">
+    <h2>➕ Adicionar Lançamento</h2>
+
+    <div class="tipo-toggle">
+      <button
+        type="button"
+        class="btn-tipo"
+        [class.ativo-receita]="tipoAtual === 'receita'"
+        (click)="selecionarTipo('receita')"
+      >
+        ↑ Receita
+      </button>
+
+      <button
+        type="button"
+        class="btn-tipo"
+        [class.ativo-gasto]="tipoAtual === 'gasto'"
+        (click)="selecionarTipo('gasto')"
+      >
+        ↓ Gasto
+      </button>
+    </div>
+
+    <div class="form-linha">
+      <div class="form-grupo">
+        <label for="descricao">Descrição</label>
+        <input
+          id="descricao"
+          type="text"
+          placeholder="Ex: Salário, Mercado, Conta de luz..."
+          maxlength="60"
+          [(ngModel)]="descricao"
+        />
+      </div>
+
+      <div class="form-grupo">
+        <label for="valor">Valor (R$)</label>
+        <input
+          id="valor"
+          type="number"
+          placeholder="0,00"
+          min="0.01"
+          step="0.01"
+          [(ngModel)]="valor"
+        />
+      </div>
+    </div>
+
+    <div class="form-grupo">
+      <label for="categoria">Categoria</label>
+
+      <select id="categoria" [(ngModel)]="categoria">
+        <option *ngFor="let item of categorias" [value]="item">
+          {{ item }}
+        </option>
+      </select>
+    </div>
+
+    <button class="btn-salvar" type="button" (click)="adicionarLancamento()">
+      Salvar Lançamento
+    </button>
+
+    <div *ngIf="feedback" class="feedback" [class.sucesso]="feedbackTipo === 'sucesso'" [class.erro]="feedbackTipo === 'erro'">
+      {{ feedback }}
+    </div>
+  </section>
+
+  <section class="lista-header">
+    <h2>📋 Lançamentos</h2>
+
+    <div class="lista-acoes">
+      <span>
+        {{ lancamentos.length }} registro{{ lancamentos.length !== 1 ? 's' : '' }}
+      </span>
+
+      <button class="btn-apagar" type="button" (click)="apagarTodos()">
+        🗑️ Apagar Tudo
+      </button>
+    </div>
+  </section>
+
+  <section *ngIf="lancamentos.length === 0" class="vazio">
+    <div class="icone-vazio">📭</div>
+    <p>Nenhum lançamento ainda.<br />Adicione seu primeiro registro acima!</p>
+  </section>
+
+  <section>
+    <div *ngFor="let item of lancamentos" class="item" [class.receita]="item.tipo === 'receita'" [class.gasto]="item.tipo === 'gasto'">
+      <div class="item-info">
+        <div class="item-descricao">
+          {{ item.descricao }}
+        </div>
+
+        <div class="item-meta">
+          <span class="badge" [class.receita]="item.tipo === 'receita'" [class.gasto]="item.tipo === 'gasto'">
+            {{ item.tipo }}
+          </span>
+
+          <span>📂 {{ item.categoria || 'Outros' }}</span>
+          <span>📅 {{ item.data }}</span>
+        </div>
+      </div>
+
+      <div class="item-direita">
+        <div class="item-valor" [class.receita]="item.tipo === 'receita'" [class.gasto]="item.tipo === 'gasto'">
+          {{ item.tipo === 'gasto' ? '−' : '+' }}{{ formatarReais(item.valor) }}
+        </div>
+
+        <button class="btn-excluir" type="button" (click)="excluirLancamento(item.id)">
+          ✕
+        </button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div>Projeto Final — Disciplina de DevOps</div>
+  <div class="equipe">
+    Squad: Maria Eduarda Trevizane · Maria Clara Trevizane · Luís Fernando Andrade · João Vitor Rodrigues
+  </div>
+</footer>
